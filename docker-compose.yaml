@@ -1,0 +1,32 @@
+services:
+  ros2-px4-agent:
+    build:
+      context: .
+      args:
+        # ホストの `id yamamotolab` と一致させる(bind mount 上のファイル所有者問題を無くすため)
+        USER_UID: 1002
+        USER_GID: 1002
+        # Micro-XRCE-DDS-Agent のタグ。変えたら `docker compose up -d --build`
+        XRCE_AGENT_VERSION: v3.0.1
+    container_name: px4_agent
+    # Agent が落ちればコンテナごと止まり、この設定で再起動される
+    restart: always
+    # PID 1 を docker-init(tini)にし、Agent をその子にする。Agent 自身は SIGTERM ハンドラを持たず、
+    # PID 1 のままだとシグナルを捨てて docker stop / shutdown が 10 秒待ちになるため
+    init: true
+    # DDS のマルチキャスト探索を LAN に素通しするため host ネットワーク(同じ LAN の PC から /fmu/out/* が見える)
+    network_mode: host
+    # Fast DDS の共有メモリトランスポート用
+    shm_size: '1gb'
+    volumes:
+      # ワークスペースは資産。イメージを作り直しても残る(相対パスなのでフォルダを移動しても追従する)
+      - ./ros2_ws:/home/rosuser/ros2_ws
+    devices:
+      # RPi5 の UART0(GPIO14/15)。コンテナ内では rosuser が dialout なので privileged は不要
+      - "/dev/ttyAMA0:/dev/ttyAMA0"
+    logging:
+      # 電源断で json ログが壊れても被害を小さくし、肥大化も防ぐ(10 MB x 3)
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

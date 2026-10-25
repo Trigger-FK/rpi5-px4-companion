@@ -1,0 +1,4 @@
+# colcon がコンテナ内で生成する(資産は ros2_ws/src だけ)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
